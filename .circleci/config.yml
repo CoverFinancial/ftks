@@ -4,6 +4,7 @@ jobs:
     environment:
       APPLICATION: ftks
       HARBOR_IMAGE_NAME: harbor.coverdev.com/cover/ftks
+      VERSION: v2
     docker:
       - image: circleci/buildpack-deps:stretch
     steps:
@@ -20,6 +21,8 @@ jobs:
             echo "$HARBOR_PASSWORD" | docker login -u "$HARBOR_USERNAME" harbor.coverdev.com --password-stdin
             docker tag $HARBOR_IMAGE_NAME:latest $HARBOR_IMAGE_NAME:$SHORT_GIT_HASH
             docker push $HARBOR_IMAGE_NAME:$SHORT_GIT_HASH
+            docker tag $HARBOR_IMAGE_NAME:latest $HARBOR_IMAGE_NAME:$VERSION
+            docker push $HARBOR_IMAGE_NAME:$VERSION
             curl https://buildinfo.coverdev.com/builds -X POST -H "Authorization: Bearer ${BUILDTOKEN}" -H "Content-Type: application/json" -d "{\"application\": \"${APPLICATION}\", \"image\":\"${HARBOR_IMAGE_NAME}\",\"tag\":\"${SHORT_GIT_HASH}\", \"commitid\": \"${CIRCLE_SHA1}\",\"branch\":\"${CIRCLE_BRANCH}\" }" || true
 
 workflows:
