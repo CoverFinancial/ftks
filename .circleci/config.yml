@@ -1,29 +1,26 @@
-version: 2.1
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
 jobs:
   build:
-    environment:
-      APPLICATION: ftks
-      HARBOR_IMAGE_NAME: harbor.coverdev.com/cover/ftks
     docker:
-      - image: circleci/buildpack-deps:stretch
+      # specify the version
+      - image: circleci/golang:1.9
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
+
+    #### TEMPLATE_NOTE: go expects specific checkout path representing url
+    #### expecting it in the form of
+    ####   /go/src/github.com/circleci/go-tool
+    ####   /go/src/bitbucket.org/circleci/go-tool
+    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: Build Docker image
-          command: docker build -t $HARBOR_IMAGE_NAME:latest .
-      - run:
-          name: Publish Docker Image to HARBOR
-          command: |
-            SHORT_GIT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)
-            echo "$HARBOR_PASSWORD" | docker login -u "$HARBOR_USERNAME" harbor.coverdev.com --password-stdin
-            docker tag $HARBOR_IMAGE_NAME:latest $HARBOR_IMAGE_NAME:$SHORT_GIT_HASH
-            docker push $HARBOR_IMAGE_NAME:$SHORT_GIT_HASH
-            curl https://buildinfo.coverdev.com/builds -X POST -H "Authorization: Bearer ${BUILDTOKEN}" -H "Content-Type: application/json" -d "{\"application\": \"${APPLICATION}\", \"image\":\"${HARBOR_IMAGE_NAME}\",\"tag\":\"${SHORT_GIT_HASH}\", \"commitid\": \"${CIRCLE_SHA1}\",\"branch\":\"${CIRCLE_BRANCH}\" }" || true
 
-workflows:
-  version: 2
-  build:
-    jobs:
-      - build
+      # specify any bash command here prefixed with `run: `
+      - run: go get -v -t -d ./...
+      - run: go test -v ./...
